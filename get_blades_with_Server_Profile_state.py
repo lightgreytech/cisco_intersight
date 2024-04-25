@@ -65,7 +65,7 @@ if __name__ == "__main__":
                             "Blade_Model": result.get("Model"),
                             "Blade_Moid": result.get("Moid"),
                             "Blade_Serial": result.get("Serial"),
-                            "Parent_Moid": result.get("Parent")["Moid"]
+                            # "Parent_Moid": result.get("Parent")["Moid"],
                         }
                         # Check if Service Profile is "Assigned"/"Associated" to the blade
                         blade_moid = device_entry["Blade_Moid"]
@@ -90,9 +90,12 @@ if __name__ == "__main__":
                         # Check if the blade's Moid is linked to a chassis Moid and append chassis model if available
                         parent_moid = result.get("Parent")["Moid"]
                         if parent_moid in chassis_dict["Chassis_Moid"]:
-                            device_entry["Connected Chassis Model"] = chassis_dict["Chassis_Model"]
-                            device_entry["Connected Chassis Serial"] = chassis_dict["Chassis_Serial"]
-                            device_entry["Connected Chassis Moid"] = chassis_dict["Chassis_Moid"]
+                            detail = {
+                                "Connected Chassis Model": chassis_dict["Chassis_Model"],
+                                "Connected Chassis Serial": chassis_dict["Chassis_Serial"],
+                                "Connected Chassis Moid": chassis_dict["Chassis_Moid"],
+                            }
+                            device_entry["Connected_Chassis_Info"] = detail
                          # check for Associated Service profiles
 
                         all_devices.append(device_entry)
