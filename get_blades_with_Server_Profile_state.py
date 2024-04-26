@@ -59,7 +59,8 @@ if __name__ == "__main__":
 
                 # Process compute blades
                 for result in data.get("Results", []):
-                    if result.get("SourceObjectType") == "compute.Blade":
+                    server_type = result.get("SourceObjectType")
+                    if server_type == "compute.Blade" or server_type == "compute.RackUnit":
                         device_entry = {
                             "Blade_Dn": result.get("Dn"),
                             "Blade_Model": result.get("Model"),
@@ -67,39 +68,48 @@ if __name__ == "__main__":
                             "Blade_Serial": result.get("Serial"),
                             # "Parent_Moid": result.get("Parent")["Moid"],
                         }
+                        if "UCSC" in result.get("Model"):
+                            device_entry["Server_Type"] = "This is a C-Series RACK Server"
+                        elif "UCSX" in result.get("Model"):
+                            device_entry["Server_Type"] = "This is an X-Series Server"
+                        elif "UCSB" in result.get("Model"):
+                            device_entry["Server_Type"] = "This is a B-Series Server"
+                        else:
+                            device_entry["Server_Type"] = "Not sure what Server Model this is!"
                         # Check if Service Profile is "Assigned"/"Associated" to the blade
-                        blade_moid = device_entry["Blade_Moid"]
-                        get_server_profiles = requests.get(BASE_URL + "server/Profiles",auth=AUTH)
-                        all_server_profiles = get_server_profiles.json()
+                            blade_moid = device_entry["Blade_Moid"]
+                            get_server_profiles = requests.get(BASE_URL + "server/Profiles",auth=AUTH)
+                            all_server_profiles = get_server_profiles.json()
 
-                        for server_profile in all_server_profiles.get("Results", []):
-                            assigned_servers = server_profile.get("AssignedServer")
-                            associated_servers = server_profile.get("AssociatedServer")
-                            if assigned_servers:
-                                for server in assigned_servers:
-                                    assigned_moid = assigned_servers["Moid"]
-                                    if blade_moid == assigned_moid:
-                                        device_entry["Assigned_Server_Profile"] = server_profile.get("Name")
-                                        if associated_servers:
-                                            associated_moid = associated_servers["Moid"]
-                                            if blade_moid in associated_moid:
-                                                device_entry["Associated_to_a_profile"] = "TRUE!!!"+" 'Assigned' & 'Deployed'"
-                                        else:
-                                            device_entry["Associated_to_a_profile"] = "FALSE!!"+" 'Assigned' but NOT 'Deployed'"
-                               
-                        # Check if the blade's Moid is linked to a chassis Moid and append chassis model if available
-                        parent_moid = result.get("Parent")["Moid"]
-                        if parent_moid in chassis_dict["Chassis_Moid"]:
-                            detail = {
-                                "Connected Chassis Model": chassis_dict["Chassis_Model"],
-                                "Connected Chassis Serial": chassis_dict["Chassis_Serial"],
-                                "Connected Chassis Moid": chassis_dict["Chassis_Moid"],
-                            }
-                            device_entry["Connected_Chassis_Info"] = detail
-                         # check for Associated Service profiles
+                            for server_profile in all_server_profiles.get("Results", []):
+                                assigned_servers = server_profile.get("AssignedServer")
+                                associated_servers = server_profile.get("AssociatedServer")
+                                if assigned_servers:
+                                    for server in assigned_servers:
+                                        assigned_moid = assigned_servers["Moid"]
+                                        if blade_moid == assigned_moid:
+                                            device_entry["Assigned_Server_Profile"] = server_profile.get("Name")
+                                            if associated_servers:
+                                                associated_moid = associated_servers["Moid"]
+                                                if blade_moid in associated_moid:
+                                                    device_entry["Associated_to_a_profile"] = "TRUE!!!"+" 'Assigned' & 'Deployed'"
+                                            else:
+                                                device_entry["Associated_to_a_profile"] = "FALSE!!"+" 'Assigned' but NOT 'Deployed'"
+                                
+                            # Check if the blade's Moid is linked to a chassis Moid and append chassis model if available
+                        if server_type != "compute.RackUnit":    
+                            parent_moid = result.get("Parent")["Moid"]
+                        
+                            if parent_moid in chassis_dict["Chassis_Moid"]:
+                                detail = {
+                                    "Connected Chassis Model": chassis_dict["Chassis_Model"],
+                                    "Connected Chassis Serial": chassis_dict["Chassis_Serial"],
+                                    "Connected Chassis Moid": chassis_dict["Chassis_Moid"],
+                                }
+                                device_entry["Connected_Chassis_Info"] = detail
+                            # check for Associated Service profiles
 
                         all_devices.append(device_entry)
-
                 # Define the file path for the JSON file in the 'outputs' folder
                 file_path = os.path.join(output_folder, "all_blades_and_service_profile_names.json")
 
